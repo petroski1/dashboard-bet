@@ -1,46 +1,93 @@
-export type BetStatus = 'pending' | 'won' | 'lost' | 'cancelled' | 'cashout';
+export type VideoType = 'short' | 'long' | 'all';
 
-export interface Category {
+export type VideoCategory =
+  | 'Gaming'
+  | 'Music'
+  | 'Technology'
+  | 'Finance'
+  | 'Fitness'
+  | 'Lifestyle'
+  | 'Education'
+  | 'Entertainment'
+  | 'News'
+  | 'Food'
+  | 'Travel'
+  | 'Beauty'
+  | 'Sports'
+  | 'Science'
+  | 'Comedy';
+
+export interface YouTubeVideo {
   id: string;
-  name: string;
-  color: string;
-  icon: string;
+  title: string;
+  channelName: string;
+  channelId: string;
+  thumbnailUrl: string;
+  videoUrl: string;
+  category: VideoCategory;
+  type: 'short' | 'long';
+  durationSeconds: number;
+  viewCount: number;
+  likeCount: number;
+  commentCount: number;
+  publishedAt: Date;
+  hoursAgo: number;
+  viewsPerHour: number;
+  engagementRate: number;
+  growthScore: number;
+  tags: string[];
 }
 
-export interface Game {
+export interface Niche {
   id: string;
-  name: string;
-  categoryId: string;
-  league?: string;
-  homeTeam?: string;
-  awayTeam?: string;
-  date: string;
-}
-
-export interface Bet {
-  id: string;
-  gameId: string;
-  categoryId: string;
+  name: VideoCategory;
+  emoji: string;
+  totalViews: number;
+  avgEngagement: number;
+  videoCount: number;
+  shortCount: number;
+  longCount: number;
+  growthScore: number;
+  monetizationScore: number;
+  viralPotential: number;
+  avgViewsPerHour: number;
+  topVideo: YouTubeVideo;
+  cpmEstimate: number;
+  trendDirection: 'up' | 'down' | 'stable';
+  trendPercent: number;
   description: string;
-  stake: number;
-  odds: number;
-  status: BetStatus;
-  profit?: number;
-  date: string;
-  notes?: string;
-  betType: 'single' | 'multiple' | 'system';
+  tags: string[];
 }
 
-export interface FinancialSummary {
-  totalStaked: number;
-  totalWon: number;
-  totalLost: number;
-  netProfit: number;
-  roi: number;
-  winRate: number;
-  totalBets: number;
-  wonBets: number;
-  lostBets: number;
-  pendingBets: number;
-  cancelledBets: number;
+export interface FilterOptions {
+  type: VideoType;
+  category: VideoCategory | 'all';
+  sortBy: 'growthScore' | 'viewCount' | 'engagementRate' | 'viewsPerHour';
+  sortOrder: 'desc' | 'asc';
+  minViews: number;
+}
+
+export interface FavoriteNiche {
+  nicheId: string;
+  savedAt: Date;
+  notes: string;
+}
+
+export interface DashboardStats {
+  totalVideosTracked: number;
+  totalViewsLast48h: number;
+  avgEngagementRate: number;
+  topGrowthNiche: string;
+  lastUpdated: Date;
+}
+
+export interface AIRecommendation {
+  niche: Niche;
+  reason: string;
+  confidence: number;
+  estimatedMonthlyEarnings: { min: number; max: number };
+  bestVideoType: 'short' | 'long' | 'both';
+  contentIdeas: string[];
+  competitionLevel: 'low' | 'medium' | 'high';
+  timeToMonetize: string;
 }

@@ -1,48 +1,39 @@
-import type { ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
 
-interface StatCardProps {
-  title: string;
-  value: string | number;
-  subtitle?: string;
-  icon: ReactNode;
-  color: 'green' | 'red' | 'blue' | 'yellow' | 'purple' | 'slate';
+interface Props {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  sub?: string;
+  accent?: 'red' | 'green' | 'blue' | 'purple' | 'yellow';
   trend?: { value: number; label: string };
 }
 
-const colorMap = {
-  green: 'bg-green-500/10 text-green-400 border-green-500/20',
-  red: 'bg-red-500/10 text-red-400 border-red-500/20',
-  blue: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  yellow: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/20',
-  purple: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
-  slate: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+const accentMap = {
+  red: { bg: 'bg-red-600/15', icon: 'text-red-400', border: 'border-red-600/20' },
+  green: { bg: 'bg-green-600/15', icon: 'text-green-400', border: 'border-green-600/20' },
+  blue: { bg: 'bg-blue-600/15', icon: 'text-blue-400', border: 'border-blue-600/20' },
+  purple: { bg: 'bg-purple-600/15', icon: 'text-purple-400', border: 'border-purple-600/20' },
+  yellow: { bg: 'bg-yellow-600/15', icon: 'text-yellow-400', border: 'border-yellow-600/20' },
 };
 
-const iconColorMap = {
-  green: 'bg-green-500/20 text-green-400',
-  red: 'bg-red-500/20 text-red-400',
-  blue: 'bg-blue-500/20 text-blue-400',
-  yellow: 'bg-yellow-500/20 text-yellow-400',
-  purple: 'bg-purple-500/20 text-purple-400',
-  slate: 'bg-slate-500/20 text-slate-400',
-};
-
-export default function StatCard({ title, value, subtitle, icon, color, trend }: StatCardProps) {
+export default function StatCard({ icon: Icon, label, value, sub, accent = 'red', trend }: Props) {
+  const style = accentMap[accent];
   return (
-    <div className={`bg-slate-800 border rounded-2xl p-5 ${colorMap[color]}`}>
+    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors">
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${iconColorMap[color]}`}>
-          {icon}
+        <div className={`w-10 h-10 rounded-xl ${style.bg} ${style.border} border flex items-center justify-center`}>
+          <Icon size={18} className={style.icon} />
         </div>
         {trend && (
-          <span className={`text-xs font-medium px-2 py-1 rounded-full ${trend.value >= 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-            {trend.value >= 0 ? '+' : ''}{trend.value.toFixed(1)}%
-          </span>
+          <div className={`flex items-center gap-1 text-xs font-medium ${trend.value >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+            <span>{trend.value >= 0 ? '↑' : '↓'} {Math.abs(trend.value)}%</span>
+          </div>
         )}
       </div>
-      <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mb-1">{title}</p>
-      <p className="text-white text-2xl font-bold">{value}</p>
-      {subtitle && <p className="text-slate-400 text-xs mt-1">{subtitle}</p>}
+      <p className="text-2xl font-bold text-white mb-1">{value}</p>
+      <p className="text-sm text-gray-500">{label}</p>
+      {sub && <p className="text-xs text-gray-600 mt-1">{sub}</p>}
     </div>
   );
 }
