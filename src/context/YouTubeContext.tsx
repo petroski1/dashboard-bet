@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { YouTubeVideo, Niche, FilterOptions, FavoriteNiche, AIRecommendation, DashboardStats } from '../types';
-import { MOCK_VIDEOS } from '../utils/mockData';
+import { fetchTrendingVideos } from '../services/youtubeApi';
 import { buildNiches, generateAIRecommendation } from '../services/aiAnalysis';
 
 interface YouTubeContextType {
@@ -12,8 +12,12 @@ interface YouTubeContextType {
   stats: DashboardStats;
   filters: FilterOptions;
   favorites: FavoriteNiche[];
+  isLoading: boolean;
   isRefreshing: boolean;
-  lastUpdated: Date;
+  error: string | null;
+  lastUpdated: Date | null;
+  apiKey: string;
+  setApiKey: (key: string) => void;
   setFilters: (f: Partial<FilterOptions>) => void;
   toggleFavorite: (nicheId: string) => void;
   isFavorite: (nicheId: string) => boolean;
@@ -33,38 +37,67 @@ const DEFAULT_FILTERS: FilterOptions = {
 
 function applyFilters(videos: YouTubeVideo[], filters: FilterOptions): YouTubeVideo[] {
   let result = [...videos];
-
-  if (filters.type !== 'all') {
-    result = result.filter((v) => v.type === filters.type);
-  }
-  if (filters.category !== 'all') {
-    result = result.filter((v) => v.category === filters.category);
-  }
-  if (filters.minViews > 0) {
-    result = result.filter((v) => v.viewCount >= filters.minViews);
-  }
-
+  if (filters.type !== 'all') result = result.filter((v) => v.type === filters.type);
+  if (filters.category !== 'all') result = result.filter((v) => v.category === filters.category);
+  if (filters.minViews > 0) result = result.filter((v) => v.viewCount >= filters.minViews);
   result.sort((a, b) => {
-    const field = filters.sortBy;
-    const diff = a[field] - b[field];
+    const diff = a[filters.sortBy] - b[filters.sortBy];
     return filters.sortOrder === 'desc' ? -diff : diff;
   });
-
   return result;
 }
 
+function loadApiKey(): string {
+  return localStorage.getItem('yt_api_key') ?? import.meta.env.VITE_YOUTUBE_API_KEY ?? '';
+}
+
 export function YouTubeProvider({ children }: { children: ReactNode }) {
-  const [videos] = useState<YouTubeVideo[]>(MOCK_VIDEOS);
+  const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [filters, setFiltersState] = useState<FilterOptions>(DEFAULT_FILTERS);
+  const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(new Date());
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [apiKey, setApiKeyState] = useState<string>(loadApiKey);
   const [favorites, setFavorites] = useState<FavoriteNiche[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('yt_favorites') ?? '[]');
-    } catch {
-      return [];
-    }
+    try { return JSON.parse(localStorage.getItem('yt_favorites') ?? '[]'); }
+    catch { return []; }
   });
+
+  const setApiKey = useCallback((key: string) => {
+    const trimmed = key.trim();
+    localStorage.setItem('yt_api_key', trimmed);
+    setApiKeyState(trimmed);
+  }, []);
+
+  const load = useCallback(async (showRefreshing = false) => {
+    if (!apiKey) return;
+    if (showRefreshing) setIsRefreshing(true);
+    else setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchTrendingVideos(apiKey);
+      setVideos(data);
+      setLastUpdated(new Date());
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erro ao buscar dados do YouTube');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [apiKey]);
+
+  // Load when API key is set/changed
+  useEffect(() => {
+    if (apiKey) load(false);
+  }, [apiKey, load]);
+
+  // Auto-refresh every 10 minutes
+  useEffect(() => {
+    if (!apiKey) return;
+    const id = setInterval(() => load(true), 10 * 60 * 1000);
+    return () => clearInterval(id);
+  }, [apiKey, load]);
 
   const filteredVideos = applyFilters(videos, filters);
   const niches = buildNiches(videos);
@@ -73,11 +106,11 @@ export function YouTubeProvider({ children }: { children: ReactNode }) {
   const stats: DashboardStats = {
     totalVideosTracked: videos.length,
     totalViewsLast48h: videos.reduce((s, v) => s + v.viewCount, 0),
-    avgEngagementRate: parseFloat(
-      (videos.reduce((s, v) => s + v.engagementRate, 0) / videos.length).toFixed(2)
-    ),
+    avgEngagementRate: videos.length
+      ? parseFloat((videos.reduce((s, v) => s + v.engagementRate, 0) / videos.length).toFixed(2))
+      : 0,
     topGrowthNiche: niches[0]?.name ?? '',
-    lastUpdated,
+    lastUpdated: lastUpdated ?? new Date(),
   };
 
   const setFilters = useCallback((partial: Partial<FilterOptions>) => {
@@ -100,19 +133,13 @@ export function YouTubeProvider({ children }: { children: ReactNode }) {
     [favorites]
   );
 
-  const refresh = useCallback(() => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setLastUpdated(new Date());
-      setIsRefreshing(false);
-    }, 1800);
-  }, []);
+  const refresh = useCallback(() => load(true), [load]);
 
   const exportCSV = useCallback(() => {
     const headers = ['Título', 'Canal', 'Categoria', 'Tipo', 'Visualizações', 'Likes', 'Comentários', 'Engajamento%', 'Views/Hora', 'Score'];
     const rows = filteredVideos.map((v) => [
-      `"${v.title}"`,
-      `"${v.channelName}"`,
+      `"${v.title.replace(/"/g, '""')}"`,
+      `"${v.channelName.replace(/"/g, '""')}"`,
       v.category,
       v.type,
       v.viewCount,
@@ -132,29 +159,12 @@ export function YouTubeProvider({ children }: { children: ReactNode }) {
     URL.revokeObjectURL(url);
   }, [filteredVideos]);
 
-  // Auto-refresh every 5 minutes
-  useEffect(() => {
-    const id = setInterval(refresh, 5 * 60 * 1000);
-    return () => clearInterval(id);
-  }, [refresh]);
-
   return (
     <YouTubeContext.Provider
       value={{
-        videos,
-        filteredVideos,
-        niches,
-        recommendation,
-        stats,
-        filters,
-        favorites,
-        isRefreshing,
-        lastUpdated,
-        setFilters,
-        toggleFavorite,
-        isFavorite,
-        refresh,
-        exportCSV,
+        videos, filteredVideos, niches, recommendation, stats, filters, favorites,
+        isLoading, isRefreshing, error, lastUpdated, apiKey,
+        setApiKey, setFilters, toggleFavorite, isFavorite, refresh, exportCSV,
       }}
     >
       {children}

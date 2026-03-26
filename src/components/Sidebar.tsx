@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, TrendingUp, BarChart3, Heart, FileDown, Youtube, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, TrendingUp, BarChart3, Heart, FileDown, Youtube, RefreshCw, Settings } from 'lucide-react';
 import { useYouTube } from '../context/YouTubeContext';
 
 const links = [
@@ -13,7 +13,14 @@ const links = [
 export default function Sidebar() {
   const { isRefreshing, refresh, lastUpdated, stats } = useYouTube();
 
-  const timeAgo = Math.floor((Date.now() - lastUpdated.getTime()) / 60000);
+  const timeAgo = lastUpdated
+    ? Math.floor((Date.now() - lastUpdated.getTime()) / 60000)
+    : null;
+
+  function clearKey() {
+    localStorage.removeItem('yt_api_key');
+    window.location.reload();
+  }
 
   return (
     <aside className="w-64 bg-gray-950 border-r border-gray-800 flex flex-col min-h-screen">
@@ -60,7 +67,9 @@ export default function Sidebar() {
           </div>
           <div className="flex justify-between text-xs">
             <span className="text-gray-500">Atualizado</span>
-            <span className="text-gray-400">{timeAgo === 0 ? 'Agora' : `${timeAgo}m atrás`}</span>
+            <span className="text-gray-400">
+              {timeAgo === null ? '—' : timeAgo === 0 ? 'Agora' : `${timeAgo}m atrás`}
+            </span>
           </div>
         </div>
         <button
@@ -70,6 +79,13 @@ export default function Sidebar() {
         >
           <RefreshCw size={13} className={isRefreshing ? 'animate-spin' : ''} />
           {isRefreshing ? 'Atualizando...' : 'Atualizar dados'}
+        </button>
+        <button
+          onClick={clearKey}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-gray-900 hover:bg-gray-800 text-gray-600 hover:text-gray-400 text-xs transition-colors border border-gray-800"
+        >
+          <Settings size={12} />
+          Trocar API Key
         </button>
       </div>
     </aside>

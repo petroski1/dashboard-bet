@@ -41,8 +41,7 @@ export default function Dashboard() {
       ]
     : [];
 
-  const now = new Date();
-  const minsAgo = Math.floor((now.getTime() - lastUpdated.getTime()) / 60000);
+  const minsAgo = lastUpdated ? Math.floor((Date.now() - lastUpdated.getTime()) / 60000) : null;
 
   return (
     <div className="p-6 space-y-6 max-w-[1400px] mx-auto">
@@ -56,7 +55,7 @@ export default function Dashboard() {
         </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-600">
-            Atualizado {minsAgo === 0 ? 'agora' : `${minsAgo}m atrás`}
+            {minsAgo === null ? '' : minsAgo === 0 ? 'Atualizado agora' : `Atualizado ${minsAgo}m atrás`}
           </span>
           <button
             onClick={refresh}
