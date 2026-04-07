@@ -6,12 +6,19 @@ import Apostas from './pages/Apostas';
 import Categorias from './pages/Categorias';
 import Jogos from './pages/Jogos';
 import Financeiro from './pages/Financeiro';
+import PublicReviews from './pages/loja/PublicReviews';
+import AdminReviews from './pages/loja/AdminReviews';
 
 export default function App() {
   return (
     <BettingProvider>
       <BrowserRouter>
         <Routes>
+          {/* Loja Militar - páginas independentes */}
+          <Route path="/avaliacoes" element={<PublicReviews />} />
+          <Route path="/admin/avaliacoes" element={<AdminReviews />} />
+
+          {/* Dashboard de apostas */}
           <Route element={<Layout />}>
             <Route path="/" element={<Dashboard />} />
             <Route path="/apostas" element={<Apostas />} />
